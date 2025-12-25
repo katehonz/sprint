@@ -1,0 +1,1867 @@
+scalar BigDecimal
+scalar Date
+scalar DateTime
+scalar Long
+scalar Upload
+
+# =============================================================================
+# QUERY
+# =============================================================================
+type Query {
+    # User queries
+    users: [User]
+    user(id: ID!): User
+    userGroups: [UserGroup]
+    currentUser: CurrentUser
+
+    # S3 queries
+    s3Objects(prefix: String): [S3Object]
+
+    # Company queries
+    companies: [Company]
+    company(id: ID!): Company
+
+    # Account queries
+    accounts(companyId: ID!): [Account]
+    account(id: ID!): Account
+    accountsByParent(companyId: ID!, parentId: ID): [Account]
+    accountHierarchy(companyId: ID!): [Account]
+    analyticalAccounts(companyId: ID!): [Account]
+    exportChartOfAccounts(companyId: ID!): [ChartOfAccountsDto]
+
+    # Journal Entry queries
+    journalEntries(filter: JournalEntryFilter!): [JournalEntry]
+    journalEntriesPaged(filter: JournalEntryFilter!): JournalEntriesPage
+    journalEntry(id: ID!): JournalEntryWithLines
+    unpostedEntries(companyId: ID!): [JournalEntry]
+
+    # Counterpart queries
+    counterparts(companyId: ID!): [Counterpart]
+    counterpart(id: ID!): Counterpart
+    searchCounterparts(companyId: ID!, query: String!): [Counterpart]
+
+    # Currency queries
+    currencies: [Currency]
+    currency(id: ID!): Currency
+    currencyByCode(code: String!): Currency
+    baseCurrency: Currency
+
+    # Exchange Rate queries
+    exchangeRates(fromCurrencyId: ID!, toCurrencyId: ID!): [ExchangeRate]
+    allExchangeRates(baseCurrency: String): [ExchangeRate]
+    exchangeRate(fromCode: String!, toCode: String!, date: Date!): ExchangeRate
+    latestExchangeRate(fromCode: String!, toCode: String!): ExchangeRate
+
+    # Bank Profile queries
+    bankProfiles(companyId: ID!): [BankProfile]
+    bankProfile(id: ID!): BankProfile
+    bankProfileByIban(iban: String!): BankProfile
+
+    # Bank Import queries
+    bankImports(companyId: ID!): [BankImport]
+    bankImport(id: ID!): BankImport
+    bankImportsByProfile(bankProfileId: ID!): [BankImport]
+
+    # VAT Rate queries
+    vatRates(companyId: ID!): [VatRate]
+    vatRate(id: ID!): VatRate
+    vatRateByCode(code: String!): VatRate
+    activeVatRates(companyId: ID!): [VatRate]
+
+    # VAT Return queries
+    vatReturns(companyId: ID!): [VatReturn]
+    vatReturn(id: ID!): VatReturn
+    vatReturnByPeriod(companyId: ID!, year: Int!, month: Int!): VatReturn
+
+    # Accounting Period queries (Приключване на периоди)
+    accountingPeriods(companyId: ID!): [AccountingPeriod!]!
+    accountingPeriodsByFilter(filter: AccountingPeriodFilter!): [AccountingPeriod!]!
+    accountingPeriod(companyId: ID!, year: Int!, month: Int!): AccountingPeriod
+    isPeriodOpen(companyId: ID!, year: Int!, month: Int!): Boolean!
+
+    # Fixed Asset queries
+    fixedAssets(companyId: ID!): [FixedAsset]
+    fixedAsset(id: ID!): FixedAsset
+    fixedAssetsByCategory(categoryId: ID!): [FixedAsset]
+    fixedAssetCategories(companyId: ID!): [FixedAssetCategory]
+    fixedAssetCategory(id: ID!): FixedAssetCategory
+
+    # Depreciation queries
+    depreciationJournal(companyId: ID!, year: Int!, month: Int): [DepreciationJournal!]!
+    calculatedPeriods(companyId: ID!): [CalculatedPeriod!]!
+    assetsNeedingDepreciation(companyId: ID!, year: Int!, month: Int!): [FixedAsset!]!
+
+    # Inventory queries
+    inventoryMovements(filter: InventoryMovementFilter!): [InventoryMovement]
+    inventoryBalances(companyId: ID!): [InventoryBalance]
+    inventoryBalance(companyId: ID!, accountId: ID!): InventoryBalance
+
+    # Количествена оборотна ведомост
+    getQuantityTurnover(input: QuantityTurnoverInput!): [QuantityTurnover!]!
+
+    # Средно претеглена цена (СПЦ)
+    getAverageCost(companyId: ID!, accountId: ID!, asOfDate: Date): AverageCostInfo!
+
+    # Проверка за корекции на СПЦ
+    checkRetroactiveCorrections(input: CheckCorrectionsInput!): [CorrectionNeeded!]!
+
+    # Report queries
+    turnoverSheet(input: TurnoverReportInput!): TurnoverSheet!
+    transactionLog(input: TransactionLogInput!): TransactionLog!
+    chronologicalReport(input: ChronologicalReportInput!): ChronologicalReport!
+    generalLedger(input: GeneralLedgerInput!): GeneralLedger!
+    bgGeneralLedger(input: GeneralLedgerInput!): BgGeneralLedger!
+    monthlyTransactionStats(input: MonthlyStatsInput!): [MonthlyTransactionStats!]!
+
+    # Audit Log queries (SUPER_ADMIN only)
+    auditLogs(filter: AuditLogFilter!): AuditLogsPage!
+    auditLogStats(companyId: ID, days: Int): [AuditLogStat!]!
+
+    # Production queries (Производство)
+    technologyCards(companyId: ID!): [TechnologyCard!]!
+    activeTechnologyCards(companyId: ID!): [TechnologyCard!]!
+    technologyCard(id: ID!): TechnologyCard
+    productionBatches(companyId: ID!): [ProductionBatch!]!
+    productionBatchesByFilter(filter: ProductionBatchFilterInput!): [ProductionBatch!]!
+    productionBatch(id: ID!): ProductionBatch
+    productionBatchStages(productionBatchId: ID!): [ProductionBatchStage!]!
+
+    # System Settings (глобални настройки)
+    systemSettings: SystemSettings!
+
+    # Scanned Invoices
+    scannedInvoices(companyId: ID!): [ScannedInvoice!]!
+    scannedInvoicesByDirection(companyId: ID!, direction: InvoiceDirection!): [ScannedInvoice!]!
+    scannedInvoice(id: ID!): ScannedInvoice
+}
+
+# =============================================================================
+# MUTATION
+# =============================================================================
+type Mutation {
+    # Auth
+    login(loginInput: LoginInput!): AuthResponse!
+
+    # User mutations
+    createUser(input: CreateUserInput!): User!
+    updateUser(id: ID!, input: UpdateUserInput!): User!
+    deleteUser(id: ID!): Boolean!
+    updateProfile(input: UpdateProfileInput!): CurrentUser!
+    changePassword(input: ChangePasswordInput!): Boolean!
+    resetUserPassword(id: ID!, newPassword: String!): Boolean!
+
+    # Company mutations
+    createCompany(input: CreateCompanyInput!): Company!
+    updateCompany(id: ID!, input: UpdateCompanyInput!): Company!
+    deleteCompany(id: ID!): Boolean!
+
+    # Account mutations
+    createAccount(input: CreateAccountInput!): Account!
+    updateAccount(id: ID!, input: UpdateAccountInput!): Account!
+    deleteAccount(id: ID!): Boolean!
+    importChartOfAccounts(companyId: ID!, accounts: [ChartOfAccountsInput!]!, replaceExisting: Boolean): Int!
+    copyChartOfAccounts(sourceCompanyId: ID!, targetCompanyId: ID!, replaceExisting: Boolean): Int!
+
+    # Journal Entry mutations
+    createJournalEntry(input: CreateJournalEntryInput!): JournalEntryWithLines!
+    updateJournalEntry(id: ID!, input: UpdateJournalEntryInput!): JournalEntryWithLines!
+    deleteJournalEntry(id: ID!): Boolean!
+    postJournalEntry(id: ID!): JournalEntry!
+    unpostJournalEntry(id: ID!): JournalEntry!
+
+    # Counterpart mutations
+    createCounterpart(input: CreateCounterpartInput!): Counterpart!
+    updateCounterpart(id: ID!, input: UpdateCounterpartInput!): Counterpart!
+    deleteCounterpart(id: ID!): Boolean!
+    validateVat(vatNumber: String!): ViesValidationResult!
+
+    # Currency mutations
+    createCurrency(input: CreateCurrencyInput!): Currency!
+    updateCurrency(id: ID!, input: UpdateCurrencyInput!): Currency!
+
+    # Exchange Rate mutations
+    createExchangeRate(input: CreateExchangeRateInput!): ExchangeRate!
+    fetchEcbRates(date: Date): [ExchangeRate!]!
+
+    # Bank Profile mutations
+    createBankProfile(input: CreateBankProfileInput!): BankProfile!
+    updateBankProfile(id: ID!, input: UpdateBankProfileInput!): BankProfile!
+    deleteBankProfile(id: ID!): Boolean!
+
+    # Bank Import mutations
+    processBankImport(bankProfileId: ID!, fileKey: String!): BankImport!
+    deleteBankImport(id: ID!): Boolean!
+
+    # VAT Rate mutations
+    createVatRate(input: CreateVatRateInput!): VatRate!
+    updateVatRate(id: ID!, input: UpdateVatRateInput!): VatRate!
+    deleteVatRate(id: ID!): Boolean!
+
+    # VAT Return mutations
+    generateVatReturn(input: GenerateVatReturnInput!): VatReturn!
+    submitVatReturn(id: ID!): VatReturn!
+    updateVatReturn(id: ID!, input: UpdateVatReturnInput!): VatReturn!
+    deleteVatReturn(id: ID!): Boolean!
+
+    # VAT Export mutations (НАП файлове)
+    exportDeklar(id: ID!): String!
+    exportPokupki(id: ID!): String!
+    exportProdajbi(id: ID!): String!
+
+    # Accounting Period mutations (Приключване на периоди)
+    closeAccountingPeriod(input: CloseAccountingPeriodInput!): AccountingPeriod!
+    reopenAccountingPeriod(input: CloseAccountingPeriodInput!): AccountingPeriod!
+
+    # Fixed Asset mutations
+    createFixedAsset(input: CreateFixedAssetInput!): FixedAsset!
+    updateFixedAsset(id: ID!, input: UpdateFixedAssetInput!): FixedAsset!
+    deleteFixedAsset(id: ID!): Boolean!
+    disposeFixedAsset(id: ID!, disposalDate: Date!, disposalAmount: BigDecimal!): FixedAsset!
+    createFixedAssetCategory(input: CreateFixedAssetCategoryInput!): FixedAssetCategory!
+    updateFixedAssetCategory(id: ID!, input: UpdateFixedAssetCategoryInput!): FixedAssetCategory!
+
+    # Depreciation mutations
+    calculateMonthlyDepreciation(companyId: ID!, year: Int!, month: Int!): DepreciationCalculationResult!
+    postDepreciation(companyId: ID!, year: Int!, month: Int!): DepreciationPostResult!
+
+    # Inventory mutations - движенията се създават автоматично при осчетоводяване
+
+    # Document Scanning
+    recognizeInvoice(file: Upload!, invoiceType: String!, companyId: ID!): RecognizedInvoice
+
+    # Scanned Invoice management
+    saveScannedInvoice(companyId: ID!, recognized: RecognizedInvoiceInput!, fileName: String): ScannedInvoice!
+    updateScannedInvoiceAccounts(id: ID!, input: UpdateScannedInvoiceAccountsInput!): ScannedInvoice!
+    validateScannedInvoiceVies(id: ID!): ScannedInvoice!
+    deleteScannedInvoice(id: ID!): Boolean!
+    rejectScannedInvoice(id: ID!, reason: String): ScannedInvoice!
+    processScannedInvoice(id: ID!): ScannedInvoice!
+
+    # Report exports
+    exportTurnoverSheet(input: TurnoverReportInput!, format: String!): ReportExport!
+    exportTransactionLog(input: TransactionLogInput!, format: String!): ReportExport!
+    exportChronologicalReport(input: ChronologicalReportInput!, format: String!): ReportExport!
+    exportGeneralLedger(input: GeneralLedgerInput!, format: String!): ReportExport!
+    exportBgGeneralLedger(input: GeneralLedgerInput!, format: String!): ReportExport!
+    exportMonthlyStats(input: MonthlyStatsInput!, format: String!): ReportExport!
+
+    # Production mutations (Производство)
+    createTechnologyCard(input: CreateTechnologyCardInput!): TechnologyCard!
+    updateTechnologyCard(input: UpdateTechnologyCardInput!): TechnologyCard!
+    deleteTechnologyCard(id: ID!): Boolean!
+    createProductionBatch(input: CreateProductionBatchInput!): ProductionBatch!
+    updateProductionBatch(input: UpdateProductionBatchInput!): ProductionBatch!
+    startProductionBatch(id: ID!): ProductionBatch!
+    completeProductionBatch(id: ID!): ProductionBatch!
+    cancelProductionBatch(id: ID!): ProductionBatch!
+    deleteProductionBatch(id: ID!): Boolean!
+    completeProductionStage(input: CompleteProductionStageInput!): ProductionBatchStage!
+    cancelProductionStage(id: ID!): ProductionBatchStage!
+
+    # System Settings mutations (SUPER_ADMIN only)
+    updateSmtpSettings(input: UpdateSmtpSettingsInput!): SystemSettings!
+    testSmtpConnection(testEmail: String!): Boolean!
+}
+
+# =============================================================================
+# USER TYPES
+# =============================================================================
+type User {
+    id: ID!
+    username: String!
+    email: String!
+    firstName: String!
+    lastName: String!
+    group: UserGroup
+    isActive: Boolean!
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+type UserGroup {
+    id: ID!
+    name: String!
+    description: String
+}
+
+type CurrentUser {
+    id: ID!
+    username: String!
+    email: String!
+    firstName: String!
+    lastName: String!
+    group: UserGroup
+}
+
+input LoginInput {
+    username: String!
+    password: String!
+}
+
+type AuthResponse {
+    token: String!
+}
+
+input CreateUserInput {
+    username: String!
+    email: String!
+    password: String!
+    firstName: String!
+    lastName: String!
+    groupId: ID
+    isActive: Boolean
+}
+
+input UpdateUserInput {
+    username: String
+    email: String
+    firstName: String
+    lastName: String
+    groupId: ID
+    isActive: Boolean
+}
+
+input UpdateProfileInput {
+    email: String
+    firstName: String
+    lastName: String
+}
+
+input ChangePasswordInput {
+    currentPassword: String!
+    newPassword: String!
+}
+
+# =============================================================================
+# S3 TYPES
+# =============================================================================
+type S3Object {
+    key: String!
+    size: Long!
+    lastModified: String!
+}
+
+# =============================================================================
+# COMPANY
+# =============================================================================
+type Company {
+    id: ID!
+    name: String!
+    eik: String!
+    vatNumber: String
+    address: String
+    city: String
+    country: String
+    phone: String
+    email: String
+    contactPerson: String
+    managerName: String
+    managerEgn: String
+    authorizedPerson: String
+    authorizedPersonEgn: String
+    isActive: Boolean!
+    enableViesValidation: Boolean!
+    enableAiMapping: Boolean!
+    autoValidateOnImport: Boolean!
+    preferredRateProvider: RateProvider!
+    azureFormRecognizerEndpoint: String
+    azureFormRecognizerKey: String
+    baseCurrency: Currency
+    # Default сметки за автоматични операции
+    defaultCashAccount: Account
+    defaultCustomersAccount: Account
+    defaultSuppliersAccount: Account
+    defaultSalesRevenueAccount: Account
+    defaultVatPurchaseAccount: Account
+    defaultVatSalesAccount: Account
+    defaultCardPaymentPurchaseAccount: Account
+    defaultCardPaymentSalesAccount: Account
+    # Salt Edge Open Banking
+    saltEdgeAppId: String
+    saltEdgeEnabled: Boolean!
+    napOffice: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+input CreateCompanyInput {
+    name: String!
+    eik: String!
+    vatNumber: String
+    address: String
+    city: String
+    country: String
+    phone: String
+    email: String
+    contactPerson: String
+    managerName: String
+    managerEgn: String
+    authorizedPerson: String
+    authorizedPersonEgn: String
+    napOffice: String
+    enableViesValidation: Boolean
+    enableAiMapping: Boolean
+    autoValidateOnImport: Boolean
+    preferredRateProvider: RateProvider
+    azureFormRecognizerEndpoint: String
+    azureFormRecognizerKey: String
+    baseCurrencyId: ID
+}
+
+input UpdateCompanyInput {
+    name: String
+    eik: String
+    vatNumber: String
+    address: String
+    city: String
+    country: String
+    phone: String
+    email: String
+    contactPerson: String
+    managerName: String
+    managerEgn: String
+    authorizedPerson: String
+    authorizedPersonEgn: String
+    isActive: Boolean
+    napOffice: String
+    enableViesValidation: Boolean
+    enableAiMapping: Boolean
+    autoValidateOnImport: Boolean
+    preferredRateProvider: RateProvider
+    azureFormRecognizerEndpoint: String
+    azureFormRecognizerKey: String
+    baseCurrencyId: ID
+    # Default сметки за автоматични операции
+    defaultCashAccountId: ID
+    defaultCustomersAccountId: ID
+    defaultSuppliersAccountId: ID
+    defaultSalesRevenueAccountId: ID
+    defaultVatPurchaseAccountId: ID
+    defaultVatSalesAccountId: ID
+    defaultCardPaymentPurchaseAccountId: ID
+    defaultCardPaymentSalesAccountId: ID
+    # Salt Edge Open Banking
+    saltEdgeAppId: String
+    saltEdgeSecret: String
+    saltEdgeEnabled: Boolean
+}
+
+enum RateProvider {
+    ECB
+    MANUAL
+    API
+}
+
+# =============================================================================
+# ACCOUNT
+# =============================================================================
+type Account {
+    id: ID!
+    code: String!
+    name: String!
+    description: String
+    accountType: AccountType!
+    accountClass: Int!
+    parent: Account
+    level: Int!
+    isVatApplicable: Boolean!
+    vatDirection: VatDirection!
+    isActive: Boolean!
+    isAnalytical: Boolean!
+    companyId: Int!
+    supportsQuantities: Boolean!
+    defaultUnit: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+enum AccountType {
+    ASSET
+    LIABILITY
+    EQUITY
+    REVENUE
+    EXPENSE
+}
+
+enum VatDirection {
+    NONE
+    INPUT
+    OUTPUT
+    BOTH
+}
+
+input CreateAccountInput {
+    code: String!
+    name: String!
+    description: String
+    accountType: AccountType!
+    accountClass: Int!
+    parentId: ID
+    isVatApplicable: Boolean
+    vatDirection: VatDirection
+    supportsQuantities: Boolean
+    defaultUnit: String
+    companyId: ID!
+}
+
+input UpdateAccountInput {
+    code: String
+    name: String
+    description: String
+    accountType: AccountType
+    parentId: ID
+    isVatApplicable: Boolean
+    vatDirection: VatDirection
+    supportsQuantities: Boolean
+    defaultUnit: String
+    isActive: Boolean
+}
+
+# Chart of Accounts Import/Export
+type ChartOfAccountsDto {
+    code: String!
+    name: String!
+    accountType: AccountType
+    accountClass: Int
+    parentCode: String
+    isAnalytical: Boolean
+    isVatApplicable: Boolean
+    vatDirection: VatDirection
+    supportsQuantities: Boolean
+    defaultUnit: String
+    isActive: Boolean
+}
+
+input ChartOfAccountsInput {
+    code: String!
+    name: String!
+    accountType: AccountType
+    accountClass: Int
+    parentCode: String
+    isAnalytical: Boolean
+    isVatApplicable: Boolean
+    vatDirection: VatDirection
+    supportsQuantities: Boolean
+    defaultUnit: String
+    isActive: Boolean
+}
+
+# =============================================================================
+# JOURNAL ENTRY
+# =============================================================================
+type JournalEntry {
+    id: ID!
+    entryNumber: String!
+    documentDate: Date!
+    vatDate: Date
+    accountingDate: Date!
+    documentNumber: String
+    description: String!
+    totalAmount: BigDecimal!
+    totalVatAmount: BigDecimal!
+    isPosted: Boolean!
+    postedAt: DateTime
+    companyId: Int!
+    counterpartId: Int
+    counterpart: Counterpart
+    documentType: String
+    vatDocumentType: String
+    vatPurchaseOperation: String
+    vatSalesOperation: String
+    lines: [EntryLine]
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type JournalEntryWithLines {
+    id: ID!
+    entryNumber: String!
+    documentDate: Date!
+    vatDate: Date
+    accountingDate: Date!
+    documentNumber: String
+    description: String!
+    totalAmount: BigDecimal!
+    totalVatAmount: BigDecimal!
+    isPosted: Boolean!
+    postedAt: DateTime
+    companyId: Int!
+    counterpartId: Int
+    counterpart: Counterpart
+    documentType: String
+    vatDocumentType: String
+    vatPurchaseOperation: String
+    vatSalesOperation: String
+    lines: [EntryLine!]!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+input CreateJournalEntryInput {
+    entryNumber: String
+    documentDate: Date!
+    vatDate: Date
+    accountingDate: Date!
+    documentNumber: String
+    description: String!
+    companyId: ID!
+    counterpartId: ID
+    totalAmount: BigDecimal
+    totalVatAmount: BigDecimal
+    lines: [CreateEntryLineInput!]!
+    documentType: String
+    vatDocumentType: String
+    vatPurchaseOperation: String
+    vatSalesOperation: String
+    scannedInvoiceId: ID
+}
+
+input UpdateJournalEntryInput {
+    documentDate: Date
+    vatDate: Date
+    accountingDate: Date
+    documentNumber: String
+    description: String
+    lines: [CreateEntryLineInput!]
+    documentType: String
+    vatDocumentType: String
+}
+
+input JournalEntryFilter {
+    companyId: ID!
+    fromDate: Date
+    toDate: Date
+    vatFromDate: Date
+    vatToDate: Date
+    accountId: ID
+    isPosted: Boolean
+    documentNumber: String
+    search: String
+    vatPurchaseOperation: String
+    vatSalesOperation: String
+    offset: Int
+    limit: Int
+}
+
+type JournalEntriesPage {
+    entries: [JournalEntry]!
+    totalCount: Int!
+    hasMore: Boolean!
+}
+
+# =============================================================================
+# ENTRY LINE
+# =============================================================================
+type EntryLine {
+    id: ID!
+    journalEntryId: Int!
+    accountId: Int!
+    account: Account
+    debitAmount: BigDecimal!
+    creditAmount: BigDecimal!
+    counterpartId: Int
+    currencyCode: String
+    exchangeRate: BigDecimal
+    baseAmount: BigDecimal!
+    vatAmount: BigDecimal!
+    quantity: BigDecimal
+    unitOfMeasureCode: String
+    description: String
+    lineOrder: Int!
+    createdAt: DateTime!
+}
+
+input CreateEntryLineInput {
+    accountId: ID!
+    debitAmount: BigDecimal
+    creditAmount: BigDecimal
+    counterpartId: ID
+    currencyCode: String
+    exchangeRate: BigDecimal
+    vatAmount: BigDecimal
+    quantity: BigDecimal
+    unitOfMeasureCode: String
+    description: String
+    lineOrder: Int
+}
+
+# =============================================================================
+# COUNTERPART
+# =============================================================================
+type Counterpart {
+    id: ID!
+    name: String!
+    eik: String
+    vatNumber: String
+    address: String
+    longAddress: String
+    city: String
+    country: String
+    counterpartType: CounterpartType!
+    isVatRegistered: Boolean!
+    companyId: Int!
+    isActive: Boolean!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+enum CounterpartType {
+    CUSTOMER
+    SUPPLIER
+    EMPLOYEE
+    BANK
+    GOVERNMENT
+    OTHER
+}
+
+input CreateCounterpartInput {
+    name: String!
+    eik: String
+    vatNumber: String
+    address: String
+    longAddress: String
+    city: String
+    country: String
+    counterpartType: CounterpartType!
+    isVatRegistered: Boolean
+    companyId: ID!
+}
+
+input UpdateCounterpartInput {
+    name: String
+    eik: String
+    vatNumber: String
+    address: String
+    longAddress: String
+    city: String
+    country: String
+    counterpartType: CounterpartType
+    isVatRegistered: Boolean
+    isActive: Boolean
+}
+
+# VIES Validation Result
+type ViesValidationResult {
+    valid: Boolean!
+    vatNumber: String
+    countryCode: String
+    name: String
+    longAddress: String
+    errorMessage: String
+    source: String
+}
+
+# =============================================================================
+# CURRENCY (базова валута EUR)
+# =============================================================================
+type Currency {
+    id: ID!
+    code: String!
+    name: String!
+    nameBg: String!
+    symbol: String
+    decimalPlaces: Int!
+    isActive: Boolean!
+    isBaseCurrency: Boolean!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+input CreateCurrencyInput {
+    code: String!
+    name: String!
+    nameBg: String!
+    symbol: String
+    decimalPlaces: Int
+    isBaseCurrency: Boolean
+}
+
+input UpdateCurrencyInput {
+    name: String
+    nameBg: String
+    symbol: String
+    decimalPlaces: Int
+    isActive: Boolean
+}
+
+# =============================================================================
+# EXCHANGE RATE (курсове от ЕЦБ)
+# =============================================================================
+type ExchangeRate {
+    id: ID!
+    fromCurrency: Currency!
+    toCurrency: Currency!
+    rate: BigDecimal!
+    reverseRate: BigDecimal!
+    validDate: Date!
+    rateSource: RateSource!
+    isActive: Boolean!
+    notes: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+enum RateSource {
+    ECB
+    MANUAL
+    API
+}
+
+input CreateExchangeRateInput {
+    fromCurrencyCode: String!
+    toCurrencyCode: String!
+    rate: BigDecimal!
+    validDate: Date!
+    rateSource: RateSource
+    notes: String
+}
+
+# =============================================================================
+# BANK PROFILE
+# =============================================================================
+type BankProfile {
+    id: ID!
+    companyId: Int!
+    name: String!
+    iban: String
+    accountId: Int!
+    bufferAccountId: Int!
+    currencyCode: String!
+    importFormat: BankImportFormat!
+    isActive: Boolean!
+    settings: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+enum BankImportFormat {
+    UNICREDIT_MT940
+    WISE_CAMT053
+    REVOLUT_CAMT053
+    PAYSERA_CAMT053
+    POSTBANK_XML
+    OBB_XML
+    CCB_CSV
+}
+
+input CreateBankProfileInput {
+    companyId: ID!
+    name: String!
+    iban: String
+    accountId: ID!
+    bufferAccountId: ID!
+    currencyCode: String!
+    importFormat: BankImportFormat!
+    settings: String
+}
+
+input UpdateBankProfileInput {
+    name: String
+    iban: String
+    accountId: ID
+    bufferAccountId: ID
+    currencyCode: String
+    importFormat: BankImportFormat
+    isActive: Boolean
+    settings: String
+}
+
+# =============================================================================
+# BANK IMPORT
+# =============================================================================
+type BankImport {
+    id: ID!
+    bankProfileId: Int!
+    companyId: Int!
+    fileName: String!
+    importFormat: String!
+    importedAt: DateTime!
+    transactionsCount: Int!
+    totalCredit: BigDecimal!
+    totalDebit: BigDecimal!
+    createdJournalEntries: Int!
+    journalEntryIds: String
+    status: BankImportStatus!
+    errorMessage: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+enum BankImportStatus {
+    COMPLETED
+    FAILED
+    IN_PROGRESS
+}
+
+# =============================================================================
+# VAT RATE
+# =============================================================================
+type VatRate {
+    id: ID!
+    code: String!
+    name: String!
+    rate: BigDecimal!
+    vatDirection: VatDirection!
+    isActive: Boolean!
+    validFrom: Date!
+    validTo: Date
+    companyId: Int!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+input CreateVatRateInput {
+    code: String!
+    name: String!
+    rate: BigDecimal!
+    vatDirection: VatDirection!
+    validFrom: Date!
+    validTo: Date
+    companyId: ID!
+}
+
+input UpdateVatRateInput {
+    name: String
+    rate: BigDecimal
+    vatDirection: VatDirection
+    validTo: Date
+    isActive: Boolean
+}
+
+# =============================================================================
+# VAT RETURN (Справка-декларация по ЗДДС)
+# =============================================================================
+type VatReturn {
+    id: ID!
+    periodYear: Int!
+    periodMonth: Int!
+    periodFrom: Date!
+    periodTo: Date!
+    status: VatReturnStatus!
+    dueDate: Date!
+    notes: String
+    companyId: Int!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    calculatedAt: DateTime
+    submittedAt: DateTime
+
+    # Sales ledger fields (Дневник за продажби)
+    salesBase20: BigDecimal
+    salesVat20: BigDecimal
+    salesBase9: BigDecimal
+    salesVat9: BigDecimal
+    salesBaseVop: BigDecimal
+    salesVatVop: BigDecimal
+    salesBase0Export: BigDecimal
+    salesBase0Vod: BigDecimal
+    salesBase0Art3: BigDecimal
+    salesBaseArt21: BigDecimal
+    salesBaseArt69: BigDecimal
+    salesBaseExempt: BigDecimal
+    salesVatPersonalUse: BigDecimal
+    salesDocumentCount: Int!
+
+    # Purchase ledger fields (Дневник за покупки)
+    purchaseBaseFullCredit: BigDecimal
+    purchaseVatFullCredit: BigDecimal
+    purchaseBasePartialCredit: BigDecimal
+    purchaseVatPartialCredit: BigDecimal
+    purchaseBaseNoCredit: BigDecimal
+    purchaseDocumentCount: Int!
+
+    # Calculated totals
+    outputVatAmount: BigDecimal!
+    inputVatAmount: BigDecimal!
+    totalDeductibleVat: BigDecimal
+    vatToPay: BigDecimal!
+    vatToRefund: BigDecimal!
+
+    # Manual input fields (cells 70, 71, 80, 81, 82)
+    effectiveVatToPay: BigDecimal
+    vatForDeduction: BigDecimal
+    vatRefundArt92: BigDecimal
+}
+
+enum VatReturnStatus {
+    DRAFT
+    CALCULATED
+    SUBMITTED
+    ACCEPTED
+    REJECTED
+}
+
+input GenerateVatReturnInput {
+    companyId: ID!
+    periodYear: Int!
+    periodMonth: Int!
+}
+
+input UpdateVatReturnInput {
+    vatToPay: BigDecimal
+    vatToRefund: BigDecimal
+    effectiveVatToPay: BigDecimal
+    vatForDeduction: BigDecimal
+    vatRefundArt92: BigDecimal
+    notes: String
+}
+
+# =============================================================================
+# ACCOUNTING PERIOD (Приключване на периоди)
+# =============================================================================
+type AccountingPeriod {
+    id: ID!
+    companyId: Int!
+    year: Int!
+    month: Int!
+    status: PeriodStatus!
+    closedBy: User
+    closedAt: DateTime
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+enum PeriodStatus {
+    OPEN
+    CLOSED
+}
+
+input AccountingPeriodFilter {
+    companyId: ID!
+    year: Int
+    status: PeriodStatus
+}
+
+input CloseAccountingPeriodInput {
+    companyId: ID!
+    year: Int!
+    month: Int!
+}
+
+# =============================================================================
+# FIXED ASSET
+# =============================================================================
+type FixedAsset {
+    id: ID!
+    inventoryNumber: String!
+    name: String!
+    description: String
+    categoryId: Int!
+    companyId: Int!
+    acquisitionCost: BigDecimal!
+    acquisitionDate: Date!
+    documentNumber: String
+    documentDate: Date
+    putIntoServiceDate: Date
+    accountingUsefulLife: Int!
+    accountingDepreciationRate: BigDecimal!
+    accountingDepreciationMethod: String!
+    accountingSalvageValue: BigDecimal!
+    accountingAccumulatedDepreciation: BigDecimal!
+    accountingBookValue: BigDecimal!
+    taxDepreciationRate: BigDecimal!
+    taxAccumulatedDepreciation: BigDecimal!
+    taxBookValue: BigDecimal!
+    status: String!
+    disposalDate: Date
+    disposalAmount: BigDecimal
+    location: String
+    responsiblePerson: String
+    serialNumber: String
+    notes: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type FixedAssetCategory {
+    id: ID!
+    code: String!
+    name: String!
+    description: String
+    taxCategory: Int!
+    maxTaxDepreciationRate: BigDecimal!
+    defaultAccountingDepreciationRate: BigDecimal
+    minUsefulLife: Int
+    maxUsefulLife: Int
+    assetAccountCode: String!
+    depreciationAccountCode: String!
+    expenseAccountCode: String!
+    isActive: Boolean!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+input CreateFixedAssetInput {
+    inventoryNumber: String!
+    name: String!
+    description: String
+    categoryId: ID!
+    companyId: ID!
+    acquisitionCost: BigDecimal!
+    acquisitionDate: Date!
+    documentNumber: String
+    documentDate: Date
+    putIntoServiceDate: Date
+    location: String
+    responsiblePerson: String
+    serialNumber: String
+    notes: String
+}
+
+input UpdateFixedAssetInput {
+    name: String
+    description: String
+    documentNumber: String
+    documentDate: Date
+    location: String
+    responsiblePerson: String
+    notes: String
+    status: String
+}
+
+input CreateFixedAssetCategoryInput {
+    code: String!
+    name: String!
+    description: String
+    taxCategory: Int!
+    maxTaxDepreciationRate: BigDecimal!
+    defaultAccountingDepreciationRate: BigDecimal
+    minUsefulLife: Int
+    maxUsefulLife: Int
+    assetAccountCode: String!
+    depreciationAccountCode: String!
+    expenseAccountCode: String!
+}
+
+input UpdateFixedAssetCategoryInput {
+    name: String
+    description: String
+    maxTaxDepreciationRate: BigDecimal
+    defaultAccountingDepreciationRate: BigDecimal
+    minUsefulLife: Int
+    maxUsefulLife: Int
+    assetAccountCode: String
+    depreciationAccountCode: String
+    expenseAccountCode: String
+    isActive: Boolean
+}
+
+# =============================================================================
+# DEPRECIATION JOURNAL
+# =============================================================================
+type DepreciationJournal {
+    id: ID!
+    fixedAssetId: Int!
+    fixedAssetName: String!
+    fixedAssetInventoryNumber: String!
+    period: Date!
+    companyId: Int!
+    accountingDepreciationAmount: BigDecimal!
+    accountingBookValueBefore: BigDecimal!
+    accountingBookValueAfter: BigDecimal!
+    taxDepreciationAmount: BigDecimal!
+    taxBookValueBefore: BigDecimal!
+    taxBookValueAfter: BigDecimal!
+    isPosted: Boolean!
+    journalEntryId: Int
+    postedAt: DateTime
+    createdAt: DateTime!
+}
+
+type CalculatedPeriod {
+    year: Int!
+    month: Int!
+    periodDisplay: String!
+    isPosted: Boolean!
+    totalAccountingAmount: BigDecimal!
+    totalTaxAmount: BigDecimal!
+    assetsCount: Int!
+}
+
+type DepreciationCalculationResult {
+    calculated: [DepreciationJournal!]!
+    errors: [DepreciationError!]!
+    totalAccountingAmount: BigDecimal!
+    totalTaxAmount: BigDecimal!
+}
+
+type DepreciationError {
+    fixedAssetId: Int!
+    assetName: String!
+    errorMessage: String!
+}
+
+type DepreciationPostResult {
+    journalEntryId: Int!
+    totalAmount: BigDecimal!
+    assetsCount: Int!
+}
+
+# =============================================================================
+# INVENTORY
+# =============================================================================
+type InventoryMovement {
+    id: ID!
+    companyId: Int!
+    accountId: Int!
+    entryLineId: Int!
+    journalEntryId: Int!
+    movementDate: Date!
+    movementType: String!
+    quantity: BigDecimal!
+    unitPrice: BigDecimal!
+    totalAmount: BigDecimal!
+    unitOfMeasure: String
+    description: String
+    balanceAfterQuantity: BigDecimal!
+    balanceAfterAmount: BigDecimal!
+    averageCostAtTime: BigDecimal!
+    createdAt: DateTime!
+}
+
+type InventoryBalance {
+    id: ID!
+    companyId: Int!
+    accountId: Int!
+    account: Account!
+    currentQuantity: BigDecimal!
+    currentAmount: BigDecimal!
+    averageCost: BigDecimal!
+    unitOfMeasure: String
+    lastMovementDate: Date
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+input InventoryMovementFilter {
+    companyId: ID!
+    accountId: ID
+    fromDate: Date
+    toDate: Date
+    movementType: String
+}
+
+# Количествена оборотна ведомост
+input QuantityTurnoverInput {
+    companyId: ID!
+    fromDate: Date!
+    toDate: Date!
+}
+
+type QuantityTurnover {
+    accountId: Int!
+    accountCode: String!
+    accountName: String!
+    openingQuantity: BigDecimal!
+    openingAmount: BigDecimal!
+    receiptQuantity: BigDecimal!
+    receiptAmount: BigDecimal!
+    issueQuantity: BigDecimal!
+    issueAmount: BigDecimal!
+    closingQuantity: BigDecimal!
+    closingAmount: BigDecimal!
+}
+
+# Средно претеглена цена (СПЦ)
+type AverageCostInfo {
+    accountId: Int!
+    currentQuantity: BigDecimal!
+    currentAmount: BigDecimal!
+    averageCost: BigDecimal!
+}
+
+# Корекции на СПЦ
+input CheckCorrectionsInput {
+    companyId: ID!
+    accountId: ID!
+    newEntryDate: Date!
+}
+
+type CorrectionNeeded {
+    movementId: Int!
+    movementDate: Date!
+    materialAccountId: Int!
+    materialAccountCode: String!
+    materialAccountName: String!
+    expenseAccountId: Int!
+    expenseAccountCode: String!
+    expenseAccountName: String!
+    quantity: BigDecimal!
+    oldAverageCost: BigDecimal!
+    newAverageCost: BigDecimal!
+    correctionAmount: BigDecimal!
+    description: String!
+}
+
+# =============================================================================
+# DOCUMENT SCANNING
+# =============================================================================
+type RecognizedInvoice {
+    # Vendor (seller) information
+    vendorName: String
+    vendorVatNumber: String
+    vendorAddress: String
+
+    # Customer (buyer) information
+    customerName: String
+    customerVatNumber: String
+    customerAddress: String
+
+    # Invoice details
+    invoiceId: String
+    invoiceDate: Date
+    dueDate: Date
+
+    # Financial amounts
+    subtotal: BigDecimal
+    totalTax: BigDecimal
+    invoiceTotal: BigDecimal
+
+    # Auto-determined direction
+    direction: InvoiceDirection
+    validationStatus: ViesValidationStatus
+    viesValidationMessage: String
+
+    # Suggested accounts
+    suggestedAccounts: SuggestedAccounts
+
+    # Manual review
+    requiresManualReview: Boolean
+    manualReviewReason: String
+}
+
+type SuggestedAccounts {
+    counterpartyAccount: AccountInfo
+    vatAccount: AccountInfo
+    expenseOrRevenueAccount: AccountInfo
+}
+
+type AccountInfo {
+    id: Int
+    code: String
+    name: String
+}
+
+enum InvoiceDirection {
+    PURCHASE
+    SALE
+    UNKNOWN
+}
+
+enum ViesValidationStatus {
+    PENDING
+    VALID
+    INVALID
+    NOT_APPLICABLE
+    ERROR
+}
+
+# Scanned Invoice (persisted for editing before creating journal entry)
+type ScannedInvoice {
+    id: ID!
+    companyId: Int!
+    direction: InvoiceDirection!
+    status: ScannedInvoiceStatus!
+
+    # Vendor info
+    vendorName: String
+    vendorVatNumber: String
+    vendorAddress: String
+
+    # Customer info
+    customerName: String
+    customerVatNumber: String
+    customerAddress: String
+
+    # Invoice details
+    invoiceNumber: String
+    invoiceDate: Date
+    dueDate: Date
+
+    # Amounts
+    subtotal: BigDecimal
+    totalTax: BigDecimal
+    invoiceTotal: BigDecimal
+
+    # VIES validation
+    viesStatus: ViesValidationStatus
+    viesValidationMessage: String
+    viesCompanyName: String
+    viesCompanyAddress: String
+    viesValidatedAt: DateTime
+
+    # Selected accounts
+    counterpartyAccount: Account
+    vatAccount: Account
+    expenseRevenueAccount: Account
+
+    # Manual review
+    requiresManualReview: Boolean!
+    manualReviewReason: String
+    notes: String
+
+    # Reference to journal entry (after processing)
+    journalEntryId: Int
+    journalEntry: JournalEntry
+
+    originalFileName: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+enum ScannedInvoiceStatus {
+    PENDING
+    VALIDATED
+    REJECTED
+    PROCESSED
+}
+
+input RecognizedInvoiceInput {
+    vendorName: String
+    vendorVatNumber: String
+    vendorAddress: String
+    customerName: String
+    customerVatNumber: String
+    customerAddress: String
+    invoiceId: String
+    invoiceDate: Date
+    dueDate: Date
+    subtotal: BigDecimal
+    totalTax: BigDecimal
+    invoiceTotal: BigDecimal
+    direction: InvoiceDirection
+    validationStatus: ViesValidationStatus
+    requiresManualReview: Boolean
+    manualReviewReason: String
+    counterpartyAccountId: ID
+    vatAccountId: ID
+    expenseRevenueAccountId: ID
+}
+
+input UpdateScannedInvoiceAccountsInput {
+    counterpartyAccountId: ID
+    vatAccountId: ID
+    expenseRevenueAccountId: ID
+    direction: InvoiceDirection
+    notes: String
+}
+
+# =============================================================================
+# REPORTS - Inputs
+# =============================================================================
+input TurnoverReportInput {
+    companyId: ID!
+    startDate: Date!
+    endDate: Date!
+    accountId: ID
+    showZeroBalances: Boolean
+    accountCodeDepth: Int
+}
+
+input TransactionLogInput {
+    companyId: ID!
+    startDate: Date!
+    endDate: Date!
+    accountId: ID
+}
+
+input GeneralLedgerInput {
+    companyId: ID!
+    startDate: Date!
+    endDate: Date!
+    accountId: ID
+}
+
+input ChronologicalReportInput {
+    companyId: ID!
+    startDate: Date!
+    endDate: Date!
+    accountId: ID
+}
+
+input MonthlyStatsInput {
+    companyId: ID!
+    fromYear: Int!
+    fromMonth: Int!
+    toYear: Int!
+    toMonth: Int!
+}
+
+# =============================================================================
+# REPORTS - Types
+# =============================================================================
+
+# Оборотна ведомост (Turnover Sheet)
+type TurnoverSheetEntry {
+    accountId: Int!
+    accountCode: String!
+    accountName: String!
+    openingDebit: BigDecimal!
+    openingCredit: BigDecimal!
+    periodDebit: BigDecimal!
+    periodCredit: BigDecimal!
+    closingDebit: BigDecimal!
+    closingCredit: BigDecimal!
+}
+
+type TurnoverSheet {
+    companyName: String!
+    periodStart: Date!
+    periodEnd: Date!
+    entries: [TurnoverSheetEntry!]!
+    totals: TurnoverSheetEntry!
+    generatedAt: DateTime!
+}
+
+# Дневник на операциите (Transaction Log)
+type TransactionLogEntry {
+    date: Date!
+    entryNumber: String!
+    documentNumber: String
+    description: String!
+    accountCode: String!
+    accountName: String!
+    debitAmount: BigDecimal!
+    creditAmount: BigDecimal!
+    counterpartName: String
+}
+
+type TransactionLog {
+    companyName: String!
+    periodStart: Date!
+    periodEnd: Date!
+    entries: [TransactionLogEntry!]!
+    generatedAt: DateTime!
+}
+
+# Хронологичен регистър (Chronological Report)
+type ChronologicalEntry {
+    date: Date!
+    debitAccountCode: String!
+    debitAccountName: String!
+    creditAccountCode: String!
+    creditAccountName: String!
+    amount: BigDecimal!
+    debitCurrencyAmount: BigDecimal
+    debitCurrencyCode: String
+    creditCurrencyAmount: BigDecimal
+    creditCurrencyCode: String
+    documentType: String
+    documentDate: Date
+    description: String!
+}
+
+type ChronologicalReport {
+    companyName: String!
+    periodStart: Date!
+    periodEnd: Date!
+    entries: [ChronologicalEntry!]!
+    totalAmount: BigDecimal!
+    generatedAt: DateTime!
+}
+
+# Главна книга (General Ledger)
+type GeneralLedgerEntry {
+    date: Date!
+    entryNumber: String!
+    documentNumber: String
+    description: String!
+    debitAmount: BigDecimal!
+    creditAmount: BigDecimal!
+    balance: BigDecimal!
+    counterpartName: String
+}
+
+type GeneralLedgerAccount {
+    accountId: Int!
+    accountCode: String!
+    accountName: String!
+    openingBalance: BigDecimal!
+    closingBalance: BigDecimal!
+    totalDebits: BigDecimal!
+    totalCredits: BigDecimal!
+    entries: [GeneralLedgerEntry!]!
+}
+
+type GeneralLedger {
+    companyName: String!
+    periodStart: Date!
+    periodEnd: Date!
+    accounts: [GeneralLedgerAccount!]!
+    generatedAt: DateTime!
+}
+
+# Българска главна книга (BG General Ledger)
+type BgLedgerByDebitEntry {
+    creditAccountCode: String!
+    creditAccountName: String!
+    amount: BigDecimal!
+}
+
+type BgLedgerByDebit {
+    debitAccountCode: String!
+    debitAccountName: String!
+    entries: [BgLedgerByDebitEntry!]!
+    totalAmount: BigDecimal!
+}
+
+type BgLedgerByCreditEntry {
+    debitAccountCode: String!
+    debitAccountName: String!
+    amount: BigDecimal!
+}
+
+type BgLedgerByCredit {
+    creditAccountCode: String!
+    creditAccountName: String!
+    entries: [BgLedgerByCreditEntry!]!
+    totalAmount: BigDecimal!
+}
+
+type BgGeneralLedger {
+    companyName: String!
+    periodStart: Date!
+    periodEnd: Date!
+    byDebit: [BgLedgerByDebit!]!
+    byCredit: [BgLedgerByCredit!]!
+    generatedAt: DateTime!
+}
+
+# Месечна статистика (Monthly Transaction Stats)
+type MonthlyTransactionStats {
+    year: Int!
+    month: Int!
+    monthName: String!
+    totalEntries: Long!
+    postedEntries: Long!
+    totalEntryLines: Long!
+    postedEntryLines: Long!
+    totalAmount: BigDecimal!
+    vatAmount: BigDecimal!
+}
+
+# Експорт на отчети
+type ReportExport {
+    format: String!
+    content: String!
+    filename: String!
+    mimeType: String!
+}
+
+# =============================================================================
+# AUDIT LOGS
+# =============================================================================
+type AuditLog {
+    id: ID!
+    companyId: Int
+    userId: Int
+    username: String
+    userRole: String
+    action: String!
+    entityType: String
+    entityId: String
+    details: String
+    ipAddress: String
+    userAgent: String
+    success: Boolean!
+    errorMessage: String
+    createdAt: DateTime!
+}
+
+type AuditLogsPage {
+    logs: [AuditLog!]!
+    totalCount: Long!
+    hasMore: Boolean!
+}
+
+type AuditLogStat {
+    action: String!
+    count: Long!
+}
+
+input AuditLogFilter {
+    companyId: ID
+    userId: ID
+    action: String
+    fromDate: Date
+    toDate: Date
+    search: String
+    offset: Int
+    limit: Int
+}
+
+# =============================================================================
+# PRODUCTION (Производство)
+# =============================================================================
+
+type TechnologyCard {
+    id: ID!
+    companyId: Int!
+    code: String!
+    name: String!
+    description: String
+    outputAccount: Account!
+    outputQuantity: BigDecimal!
+    outputUnit: String
+    isActive: Boolean!
+    stages: [TechnologyCardStage!]!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type TechnologyCardStage {
+    id: ID!
+    technologyCardId: Int!
+    stageOrder: Int!
+    name: String!
+    description: String
+    inputAccount: Account!
+    inputQuantity: BigDecimal!
+    inputUnit: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type ProductionBatch {
+    id: ID!
+    companyId: Int!
+    technologyCard: TechnologyCard!
+    batchNumber: String!
+    plannedQuantity: BigDecimal!
+    actualQuantity: BigDecimal
+    startedAt: DateTime
+    completedAt: DateTime
+    status: ProductionBatchStatus!
+    notes: String
+    createdBy: User
+    stages: [ProductionBatchStage!]!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type ProductionBatchStage {
+    id: ID!
+    productionBatchId: Int!
+    technologyCardStage: TechnologyCardStage!
+    plannedQuantity: BigDecimal!
+    actualQuantity: BigDecimal
+    startedAt: DateTime
+    completedAt: DateTime
+    status: ProductionBatchStageStatus!
+    journalEntry: JournalEntry
+    notes: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+enum ProductionBatchStatus {
+    PLANNED
+    IN_PROGRESS
+    COMPLETED
+    CANCELLED
+}
+
+enum ProductionBatchStageStatus {
+    PENDING
+    IN_PROGRESS
+    COMPLETED
+    CANCELLED
+}
+
+input CreateTechnologyCardInput {
+    companyId: ID!
+    code: String!
+    name: String!
+    description: String
+    outputAccountId: ID!
+    outputQuantity: BigDecimal
+    outputUnit: String
+    stages: [TechnologyCardStageInput!]
+}
+
+input UpdateTechnologyCardInput {
+    id: ID!
+    code: String
+    name: String
+    description: String
+    outputAccountId: ID
+    outputQuantity: BigDecimal
+    outputUnit: String
+    isActive: Boolean
+    stages: [TechnologyCardStageInput!]
+}
+
+input TechnologyCardStageInput {
+    id: ID
+    stageOrder: Int!
+    name: String!
+    description: String
+    inputAccountId: ID!
+    inputQuantity: BigDecimal!
+    inputUnit: String
+}
+
+input CreateProductionBatchInput {
+    companyId: ID!
+    technologyCardId: ID!
+    batchNumber: String!
+    plannedQuantity: BigDecimal!
+    notes: String
+}
+
+input UpdateProductionBatchInput {
+    id: ID!
+    batchNumber: String
+    plannedQuantity: BigDecimal
+    actualQuantity: BigDecimal
+    status: ProductionBatchStatus
+    notes: String
+}
+
+input CompleteProductionStageInput {
+    productionBatchStageId: ID!
+    actualQuantity: BigDecimal!
+    notes: String
+}
+
+input ProductionBatchFilterInput {
+    companyId: ID!
+    status: ProductionBatchStatus
+    technologyCardId: ID
+    startDate: DateTime
+    endDate: DateTime
+}
+
+# =============================================================================
+# SYSTEM SETTINGS (Глобални системни настройки)
+# =============================================================================
+type SystemSettings {
+    id: Int!
+    # SMTP настройки
+    smtpHost: String
+    smtpPort: Int
+    smtpUsername: String
+    smtpFromEmail: String
+    smtpFromName: String
+    smtpUseTls: Boolean!
+    smtpUseSsl: Boolean!
+    smtpEnabled: Boolean!
+    # Други глобални настройки
+    appName: String
+    defaultLanguage: String
+    defaultTimezone: String
+    updatedAt: DateTime
+    updatedBy: String
+}
+
+input UpdateSmtpSettingsInput {
+    smtpHost: String
+    smtpPort: Int
+    smtpUsername: String
+    smtpPassword: String
+    smtpFromEmail: String
+    smtpFromName: String
+    smtpUseTls: Boolean
+    smtpUseSsl: Boolean
+    smtpEnabled: Boolean
+}

@@ -1,0 +1,41 @@
+# SP-AC Accounting System - Caddy Configuration
+# Добавете този блок към вашия Caddyfile на VPS
+
+accounting.yourdomain.com {
+    # GraphQL API -> backend
+    handle /graphql* {
+        reverse_proxy sp-ac-backend:8080
+    }
+
+    # GraphiQL interface (за разработка, може да се премахне в продукция)
+    handle /graphiql* {
+        reverse_proxy sp-ac-backend:8080
+    }
+
+    # REST API endpoints
+    handle /api/* {
+        reverse_proxy sp-ac-backend:8080
+    }
+
+    # Actuator endpoints (здраве на системата)
+    handle /actuator/* {
+        reverse_proxy sp-ac-backend:8080
+    }
+
+    # Frontend -> nginx
+    handle {
+        reverse_proxy sp-ac-frontend:80
+    }
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
+    # Logging
+    log {
+        output file /var/log/caddy/sp-ac.log
+    }
+}

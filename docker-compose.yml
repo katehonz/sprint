@@ -1,0 +1,81 @@
+services:
+  backend:
+    build: ./backend
+    container_name: sp-ac-backend
+    restart: unless-stopped
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/sp-ac-bg
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_FLYWAY_ENABLED=true
+      # Security - JWT Secret (MUST be set in production!)
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      # CORS - Add your production domain
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
+      # Disable GraphiQL in production
+      - SPRING_GRAPHQL_GRAPHIQL_ENABLED=false
+      # Optional integrations
+      - AZURE_FORM_RECOGNIZER_ENDPOINT=${AZURE_FORM_RECOGNIZER_ENDPOINT:-}
+      - AZURE_FORM_RECOGNIZER_KEY=${AZURE_FORM_RECOGNIZER_KEY:-}
+      - SALTEDGE_APP_ID=${SALTEDGE_APP_ID:-}
+      - SALTEDGE_SECRET=${SALTEDGE_SECRET:-}
+      - SALTEDGE_CALLBACK_URL=${SALTEDGE_CALLBACK_URL:-}
+      - SALTEDGE_RETURN_URL=${SALTEDGE_RETURN_URL:-}
+      # Upload temp storage configuration
+      - UPLOAD_TEMP_DIR=/app/uploads
+      - UPLOAD_MAX_STORAGE_BYTES=3221225472
+      - UPLOAD_FILE_MAX_AGE_HOURS=24
+    volumes:
+      - invoice_uploads:/app/uploads
+    networks:
+      - sp-ac-net
+      - caddy-net
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- --post-data='{\"query\":\"{ __typename }\"}' --header='Content-Type: application/json' http://localhost:8080/graphql | grep -q '__typename'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=${VITE_API_URL:-/graphql}
+    container_name: sp-ac-frontend
+    restart: unless-stopped
+    networks:
+      - caddy-net
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sp-ac-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=sp-ac-bg
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sp-ac-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  sp-ac-net:
+    driver: bridge
+  caddy-net:
+    name: caddy-proxy_caddy_network
+    external: true
+
+volumes:
+  postgres_data:
+  invoice_uploads:
