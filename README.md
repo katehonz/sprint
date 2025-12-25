@@ -1,5 +1,7 @@
 # SP-AC-BG - Българска счетоводна система
 
+![SP-AC-BG Logo](Gemini_Generated_0s4adj0s4adj0.jpeg)
+
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.1-brightgreen)
 ![React](https://img.shields.io/badge/React-19-blue)
