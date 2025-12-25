@@ -4,7 +4,7 @@
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.1-brightgreen)
 ![React](https://img.shields.io/badge/React-19-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![License](https://img.shields.io/badge/License-Proprietary-red)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 Модерна счетоводна система за български фирми, разработена съгласно Наредба Н-8 от 2006 г. и съвместима с изискванията на европейската счетоводна директива.
 
@@ -224,14 +224,15 @@ SALTEDGE_SECRET=your_secret
 
 ## 📄 Лиценз
 
-**Proprietary License** - Всички права запазени.
+**MIT License** - Вижте [LICENSE](LICENSE) файла за повече информация.
 
-## 📞 Контакти
+## 📞 Издател и контакти
 
-За технически въпроси и поддръжка:
-- 📧 Email: support@example.com
-- 🌐 Web: https://example.com
-- 📱 Телефон: +359 2 123 4567
+**Информейт ЕООД**
+
+Димитър Гигов
+
+📧 Email: info@rustac.top
 
 ---
 
